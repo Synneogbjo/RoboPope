@@ -11,6 +11,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "CPP_HUD.h"
+#include "Blueprint/UserWidget.h"
 
 // Sets default values
 ACPP_Player::ACPP_Player()
@@ -43,7 +45,15 @@ void ACPP_Player::BeginPlay()
 		{
 			Subsystem->AddMappingContext(IMC, 0);
 		}
+
+		if (PlayerHUDClass)
+		{
+			PlayerHUD = CreateWidget<UCPP_HUD>(PlayerController, PlayerHUDClass);
+			PlayerHUD->AddToPlayerScreen();
+		}
 	}
+
+	Health = MaxHealth;
 
 	CurrentSpeed = MoveSpeed;
 	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
@@ -52,41 +62,26 @@ void ACPP_Player::BeginPlay()
 
 }
 
+void ACPP_Player::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	if (PlayerHUD)
+	{
+		PlayerHUD->RemoveFromParent();
+
+		PlayerHUD = nullptr;
+	}
+}
+
 // Called every frame
 void ACPP_Player::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bIsSprinting)
-	{
-		Stamina -= StaminaConsumption * DeltaTime;
-		bRegenStamina = false;
+	UpdateStamina(DeltaTime);
 
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::White, FString::SanitizeFloat(Stamina));
-
-		if (GetWorldTimerManager().IsTimerActive(StaminaRegenCooldownTimerHandle)) GetWorldTimerManager().ClearTimer(StaminaRegenCooldownTimerHandle);
-
-		if (Stamina < 0.f)
-		{
-			bCanSprint = false;
-			bIsSprinting = false;
-			CurrentSpeed = MoveSpeed;
-			GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
-
-			GetWorldTimerManager().SetTimer(StaminaRegenCooldownTimerHandle, this, &ACPP_Player::StartStaminaRegen, StaminaOveruseCooldown);
-		}
-	}
-
-	else if (bRegenStamina)
-	{
-		Stamina += StaminaRegenSpeed * DeltaTime;
-
-		if (Stamina >= MaxStamina)
-		{
-			Stamina = MaxStamina;
-			bRegenStamina = false;
-		}
-	}
+	UpdateHUD();
 
 }
 
@@ -100,6 +95,7 @@ void ACPP_Player::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	/* Movement */
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACPP_Player::Look);
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACPP_Player::Move);
+	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ACPP_Player::SetIsMovingToFalse);
 	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACPP_Player::Sprint);
 	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACPP_Player::Sprint);
 	EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &ACPP_Player::Dash);
@@ -118,10 +114,15 @@ void ACPP_Player::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+
+#pragma region Input Functions
+
+
 /*
  * Input Functions
  */
 
+// Rotates the Camera
 void ACPP_Player::Look(const FInputActionValue& value)
 {
 	if (!Controller) return;
@@ -132,9 +133,12 @@ void ACPP_Player::Look(const FInputActionValue& value)
 	AddControllerPitchInput(DeltaLookVector.Y * CameraRotationSpeed.Y);
 }
 
+// Makes Player Move
 void ACPP_Player::Move(const FInputActionValue& value)
 {
 	if (!Controller) return;
+
+	bIsMoving = true;
 
 	const FVector2D DeltaMoveVector = value.Get<FVector2D>() * GetWorld()->GetDeltaSeconds();
 
@@ -143,6 +147,7 @@ void ACPP_Player::Move(const FInputActionValue& value)
 
 }
 
+// Activates Sprinting if Sprint Action is started. Handling of stamina is in ACPP_Player::UpdateStamina
 void ACPP_Player::Sprint(const FInputActionValue& value)
 {
 	if (!Controller) return;
@@ -153,9 +158,12 @@ void ACPP_Player::Sprint(const FInputActionValue& value)
 
 	bIsSprinting ? CurrentSpeed = SprintSpeed : CurrentSpeed = MoveSpeed;
 
-	if (!bIsSprinting) GetWorldTimerManager().SetTimer(StaminaRegenCooldownTimerHandle, this, &ACPP_Player::StartStaminaRegen, StaminaRegenCooldown);
-
 	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+
+	if (!bIsMoving || !bIsSprinting)
+	{
+		GetWorldTimerManager().SetTimer(StaminaRegenCooldownTimerHandle, this, &ACPP_Player::StartStaminaRegen, StaminaRegenCooldown);
+	}
 }
 
 void ACPP_Player::Dash(const FInputActionValue& value)
@@ -220,10 +228,79 @@ void ACPP_Player::Pause(const FInputActionValue& value)
 
 }
 
+
+#pragma endregion
+
+
+
+
+#pragma region Functions
+
+
+/*
+ * Functions
+ */
+
+
 void ACPP_Player::StartStaminaRegen()
 {
 	bRegenStamina = true;
 	bCanSprint = true;
 
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Emerald, TEXT("Stamina is regenerating!"));
 }
+
+void ACPP_Player::UpdateStamina(float DeltaTime)
+{
+	if (bIsSprinting && bIsMoving)
+	{
+		Stamina -= StaminaConsumption * DeltaTime;
+		bRegenStamina = false;
+
+		if (GetWorldTimerManager().IsTimerActive(StaminaRegenCooldownTimerHandle)) GetWorldTimerManager().ClearTimer(StaminaRegenCooldownTimerHandle);
+
+		if (Stamina < 0.f)
+		{
+			bCanSprint = false;
+			bIsSprinting = false;
+			CurrentSpeed = MoveSpeed;
+			GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+
+			GetWorldTimerManager().SetTimer(StaminaRegenCooldownTimerHandle, this, &ACPP_Player::StartStaminaRegen, StaminaOveruseCooldown);
+		}
+	}
+
+	else if (bRegenStamina)
+	{
+		Stamina += StaminaRegenSpeed * DeltaTime;
+
+		if (Stamina >= MaxStamina)
+		{
+			Stamina = MaxStamina;
+			bRegenStamina = false;
+		}
+	}
+}
+
+void ACPP_Player::SetIsMovingToFalse()
+{
+	bIsMoving = false;
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Emerald, TEXT("Not Moving"));
+}
+
+void ACPP_Player::TakeDamage(float DamageAmount)
+{
+	Health -= DamageAmount;
+}
+
+void ACPP_Player::UpdateHUD() const
+{
+	if (!PlayerHUD) return;
+
+	PlayerHUD->SetUIHealth(Health, MaxHealth);
+	PlayerHUD->SetUIStamina(Stamina, MaxStamina);
+}
+
+
+#pragma endregion
+
