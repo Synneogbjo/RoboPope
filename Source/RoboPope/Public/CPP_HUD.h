@@ -9,12 +9,35 @@
 /**
  * 
  */
+
+class UTextBlock;
+class UProgressBar;
+
 UCLASS()
 class ROBOPOPE_API UCPP_HUD : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
+
+	/*
+	 * Components
+	 */
+
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UProgressBar* HealthBar;
+
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UProgressBar* StaminaBar;
+
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UProgressBar* ChurchHealthBar;
+
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UProgressBar* EnemyCountBar;
+
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UTextBlock* AmmoText;
 
 	/*
 	 * Functions
@@ -24,22 +47,7 @@ public:
 	void SetUIStamina(float CurrentStamina, float MaxStamina);
 	void SetUIChurchHealth(float CurrentChurchHealth, float MaxChurchHealth);
 	void SetUIEnemyCount(float CurrentEnemyCount, float MaxEnemyCount);
-
-	/*
-	 * Components
-	 */
-
-	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	class UProgressBar* HealthBar;
-
-	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	class UProgressBar* StaminaBar;
-
-	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	class UProgressBar* ChurchHealthBar;
-
-	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	class UProgressBar* EnemyCountBar;
+	void SetUIAmmo(int CurrentAmmo, int MaxAmmo);
 
 	
 };
