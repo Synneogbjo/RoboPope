@@ -60,6 +60,9 @@ void ACPP_Player::BeginPlay()
 
 	Stamina = MaxStamina;
 
+	bCanDash = true;
+	bIsDashing = false;
+
 }
 
 void ACPP_Player::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -82,6 +85,11 @@ void ACPP_Player::Tick(float DeltaTime)
 	UpdateStamina(DeltaTime);
 
 	UpdateHUD();
+
+	if (bIsDashing)
+	{
+		GetCharacterMovement()->Velocity = MoveInputDirection * CurrentSpeed;
+	}
 
 }
 
@@ -138,9 +146,14 @@ void ACPP_Player::Move(const FInputActionValue& value)
 {
 	if (!Controller) return;
 
+	if (bIsDashing) return;
+
 	bIsMoving = true;
 
 	const FVector2D DeltaMoveVector = value.Get<FVector2D>() * GetWorld()->GetDeltaSeconds();
+
+	MoveInputDirection = GetActorForwardVector() * DeltaMoveVector.Y + GetActorRightVector() * DeltaMoveVector.X;
+	MoveInputDirection.Normalize();
 
 	AddMovementInput(GetActorForwardVector(), DeltaMoveVector.Y * CurrentSpeed);
 	AddMovementInput(GetActorRightVector(), DeltaMoveVector.X * CurrentSpeed);
@@ -170,7 +183,17 @@ void ACPP_Player::Dash(const FInputActionValue& value)
 {
 	if (!Controller) return;
 
+	if (!bCanDash) return;
 
+	FVector vel = GetCharacterMovement()->Velocity;
+
+	CurrentSpeed = DashSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+
+	bCanDash = false;
+	bIsDashing = true;
+
+	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &ACPP_Player::EndDash, DashDuration);
 }
 
 void ACPP_Player::Jump(const FInputActionValue& value)
@@ -299,6 +322,22 @@ void ACPP_Player::UpdateHUD() const
 
 	PlayerHUD->SetUIHealth(Health, MaxHealth);
 	PlayerHUD->SetUIStamina(Stamina, MaxStamina);
+}
+
+void ACPP_Player::SetCanDashToTrue()
+{
+	bCanDash = true;
+}
+
+void ACPP_Player::EndDash()
+{
+	bIsDashing = false;
+	CurrentSpeed = MoveSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+	GetCharacterMovement()->Velocity.Normalize();
+	GetCharacterMovement()->Velocity *= CurrentSpeed;
+
+	GetWorldTimerManager().SetTimer(DashTimerHandle, this, &ACPP_Player::SetCanDashToTrue, DashCooldown);
 }
 
 

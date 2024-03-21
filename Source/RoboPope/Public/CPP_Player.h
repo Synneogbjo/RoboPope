@@ -23,13 +23,16 @@ class ROBOPOPE_API ACPP_Player : public ACharacter
 	bool bIsSprinting;
 	float CurrentSpeed;
 
+	FVector MoveInputDirection;
 	bool bIsMoving;
 	bool bRegenStamina;
 	float Stamina;
 
-	FTimerHandle StaminaRegenCooldownTimerHandle;
+	bool bCanDash = true;
+	bool bIsDashing = false;
 
-	FVector MoveDirection;
+	FTimerHandle StaminaRegenCooldownTimerHandle;
+	FTimerHandle DashTimerHandle;
 
 public:
 	// Sets default values for this character's properties
@@ -191,5 +194,7 @@ public:
 	void SetIsMovingToFalse();
 	void TakeDamage(float DamageAmount);
 	void UpdateHUD() const;
+	void SetCanDashToTrue();
+	void EndDash();
 
 };
