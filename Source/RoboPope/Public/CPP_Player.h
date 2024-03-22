@@ -1,5 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// All code is the work of Bjorn Haugen, unless otherwise is specified
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,6 +9,7 @@
 #include "CPP_Player.generated.h"
 
 class UCPP_HUD;
+class UCPP_PauseWidget;
 struct FInputActionValue;
 class UCameraComponent;
 class UInputAction;
@@ -33,6 +36,9 @@ class ROBOPOPE_API ACPP_Player : public ACharacter
 
 	FTimerHandle StaminaRegenCooldownTimerHandle;
 	FTimerHandle DashTimerHandle;
+
+	UPROPERTY()
+	APlayerController* PlayerController;
 
 public:
 	// Sets default values for this character's properties
@@ -104,12 +110,18 @@ public:
 	 */
 
 	// Widget Class to spawn for the heads-up display
-	UPROPERTY(EditAnywhere, Category = "HUD")
+	UPROPERTY(EditAnywhere, Category = "Widgets")
 	TSubclassOf<UCPP_HUD> PlayerHUDClass;
 
 	// The widget instance that is used as our HUD
 	UPROPERTY()
 	UCPP_HUD* PlayerHUD;
+
+	UPROPERTY(EditAnywhere, Category = "Widgets")
+	TSubclassOf<UCPP_PauseWidget> PauseWidgetClass;
+
+	UPROPERTY()
+	UCPP_PauseWidget* PauseUI;
 
 	/*
 	 * Components

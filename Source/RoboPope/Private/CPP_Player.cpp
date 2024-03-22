@@ -1,5 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// All code is the work of Bjorn Haugen, unless otherwise is specified
 
 #include "CPP_Player.h"
 
@@ -12,7 +13,9 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CPP_HUD.h"
+#include "CPP_PauseWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ACPP_Player::ACPP_Player()
@@ -39,7 +42,9 @@ void ACPP_Player::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	PlayerController = Cast<APlayerController>(Controller);
+
+	if (PlayerController)
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -50,6 +55,11 @@ void ACPP_Player::BeginPlay()
 		{
 			PlayerHUD = CreateWidget<UCPP_HUD>(PlayerController, PlayerHUDClass);
 			PlayerHUD->AddToPlayerScreen();
+		}
+
+		if (PauseWidgetClass)
+		{
+			PauseUI = CreateWidget<UCPP_PauseWidget>(PlayerController, PauseWidgetClass);
 		}
 	}
 
@@ -248,6 +258,31 @@ void ACPP_Player::Pause(const FInputActionValue& value)
 {
 	if (!Controller) return;
 
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Unpausing"));
+
+	if (!PauseUI->IsInViewport())
+	{
+		PlayerHUD->RemoveFromParent();
+		PauseUI->AddToPlayerScreen(10);
+
+		if (PlayerController)
+		{
+			PlayerController->SetInputMode(FInputModeGameAndUI());
+			PlayerController->SetShowMouseCursor(true);
+		}
+
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+		return;
+	}
+
+	PauseUI->RemoveFromParent();
+	PlayerHUD->AddToPlayerScreen(0);
+
+	PlayerController->SetInputMode(FInputModeGameOnly());
+	PlayerController->SetShowMouseCursor(false);
+
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
 
 }
 

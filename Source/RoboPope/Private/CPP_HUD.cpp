@@ -1,9 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// All code is the work of Bjorn Haugen, unless otherwise is specified
 
 #include "CPP_HUD.h"
 
 #include "Components/ProgressBar.h"
+#include "CPP_Church.h"
+
+void UCPP_HUD::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	if (ChurchClass) ChurchClass->ChurchUpdateHealthDelegate.AddDynamic(this, &UCPP_HUD::SetUIChurchHealth);
+}
 
 void UCPP_HUD::SetUIHealth(float CurrentHealth, float MaxHealth)
 {

@@ -6,15 +6,16 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "CPP_HUD.generated.h"
+#include "CPP_PauseWidget.generated.h"
 
-class ACPP_Church;
-class UProgressBar;
+class UCanvasPanel;
+class UBackgroundBlur;
+class UButton;
 /**
  * 
  */
 UCLASS()
-class ROBOPOPE_API UCPP_HUD : public UUserWidget
+class ROBOPOPE_API UCPP_PauseWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
@@ -22,41 +23,38 @@ protected:
 
 	virtual void NativeOnInitialized() override;
 
-public:
+private:
 
 	/*
 	 * Components
 	 */
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	UProgressBar* HealthBar;
+	UCanvasPanel* Canvas;
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	UProgressBar* StaminaBar;
+	UButton* ResumeButton;
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	UProgressBar* ChurchHealthBar;
+	UButton* OptionsButton;
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
-	UProgressBar* EnemyCountBar;
+	UButton* MainMenuButton;
 
-	/*
-	 * Variables
-	 */
-
-	UPROPERTY(EditAnywhere)
-	ACPP_Church* ChurchClass;
+	UPROPERTY(EditAnywhere, meta = (BindWidget))
+	UBackgroundBlur* BackgroundBlur;
 
 	/*
 	 * Functions
 	 */
 
-	void SetUIHealth(float CurrentHealth, float MaxHealth);
-	void SetUIStamina(float CurrentStamina, float MaxStamina);
+	UFUNCTION()
+	void ResumeGame();
 
 	UFUNCTION()
-	void SetUIChurchHealth(float CurrentChurchHealth, float MaxChurchHealth);
+	void ShowOptions();
 
-	void SetUIEnemyCount(float CurrentEnemyCount, float MaxEnemyCount);
+	UFUNCTION()
+	void LoadMainMenu();
 	
 };
