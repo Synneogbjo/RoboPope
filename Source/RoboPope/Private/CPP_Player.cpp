@@ -130,6 +130,8 @@ void ACPP_Player::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ACPP_Player::Interact);
 	EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &ACPP_Player::Pause);
 
+	PauseAction->bTriggerWhenPaused = true;
+
 }
 
 
@@ -179,14 +181,16 @@ void ACPP_Player::Sprint(const FInputActionValue& value)
 
 	bIsSprinting = value.Get<bool>();
 
-	bIsSprinting ? CurrentSpeed = SprintSpeed : CurrentSpeed = MoveSpeed;
-
-	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
-
 	if (!bIsMoving || !bIsSprinting)
 	{
 		GetWorldTimerManager().SetTimer(StaminaRegenCooldownTimerHandle, this, &ACPP_Player::StartStaminaRegen, StaminaRegenCooldown);
 	}
+
+	if (bIsDashing) return;
+
+	bIsSprinting ? CurrentSpeed = SprintSpeed : CurrentSpeed = MoveSpeed;
+
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
 }
 
 void ACPP_Player::Dash(const FInputActionValue& value)
@@ -258,8 +262,6 @@ void ACPP_Player::Pause(const FInputActionValue& value)
 {
 	if (!Controller) return;
 
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Unpausing"));
-
 	if (!PauseUI->IsInViewport())
 	{
 		PlayerHUD->RemoveFromParent();
@@ -309,6 +311,8 @@ void ACPP_Player::StartStaminaRegen()
 
 void ACPP_Player::UpdateStamina(float DeltaTime)
 {
+	if (bIsDashing) return;
+
 	if (bIsSprinting && bIsMoving)
 	{
 		Stamina -= StaminaConsumption * DeltaTime;
